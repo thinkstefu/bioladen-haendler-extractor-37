@@ -2,17 +2,16 @@ FROM apify/actor-node-playwright:20
 
 WORKDIR /usr/src/app
 
-# Ensure correct permissions for non-root user (myuser) used by Apify base images
+# Install deps as root to avoid EACCES, then install matching Playwright browsers
 USER root
-RUN chown -R myuser:myuser /usr/src/app
-
-# Install dependencies as myuser
-USER myuser
-COPY --chown=myuser:myuser package*.json ./
+COPY package*.json ./
 RUN npm install --omit=dev --no-audit --no-fund
+RUN npx playwright install --with-deps
 
-# Copy source
+# Copy source with correct ownership for runtime user
 COPY --chown=myuser:myuser . ./
 
-# Browsers are preinstalled in the Playwright base image
+# Switch back to non-root user for execution
+USER myuser
+
 CMD ["node", "src/main.js"]
